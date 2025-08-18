@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Form\SerieType;
 use App\Repository\SerieRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
@@ -20,8 +21,8 @@ final class SerieController extends AbstractController
         $nbPerPage = $parameters->get('serie')['nb_max'];
         $offset = ($page - 1) * $nbPerPage;
         $criterias = [
-            'status' => 'Returning',
-            'genre' => 'Drama',
+//            'status' => 'Returning',
+//            'genre' => 'Drama',
         ];
 
         $series = $serieRepository->findBy(
@@ -74,4 +75,11 @@ final class SerieController extends AbstractController
         ]);
     }
 
+    #[Route('/create', name: '_create')]
+    public function create(): Response{
+        $form = $this->createForm(SerieType::class);
+        return $this->render('serie/edit.html.twig', [
+           'serie_form' => $form,
+        ]);
+    }
 }
