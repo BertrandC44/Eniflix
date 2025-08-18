@@ -16,7 +16,12 @@
 
 ###> symfony/asset-mapper ###
 /public/assets/
+/public/upload/
 /assets/vendor/
 ###< symfony/asset-mapper ###
 
 .idea
+
+
+
+
