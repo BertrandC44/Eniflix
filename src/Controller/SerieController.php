@@ -9,9 +9,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\Entity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\String\Slugger\SluggerInterface;
 
 #[Route('/serie', name: 'serie')]
 final class SerieController extends AbstractController
@@ -75,18 +77,36 @@ final class SerieController extends AbstractController
     }
 
     #[Route('/create', name: '_create')]
-    public function create(Request $request, EntityManagerInterface $em): Response{
+    public function create(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response{
         $serie = new Serie();
         $form = $this->createForm(SerieType::class,$serie);
 
         $form->handleRequest($request);
 
-        if ($form->isSubmitted()){
+        if ($form->isSubmitted() && $form->isValid()) {
+//            dd($serie);
+
+            $file=$form->get('poster_file')->getData();
+//            dd($file);
+            if($file instanceof UploadedFile){
+                $name = $slugger->slug($serie->getName()) . '-'. uniqid() . '.' . $file->guessExtension();
+                $file->move('uploads/posters/series', $name);
+                $serie->setPoster($name);
+            }
+
+            $fileBackdrop=$form->get('backdrop_file')->getData();
+            if($fileBackdrop instanceof UploadedFile){
+                $nameBackdrop = $slugger->slug($serie->getName()) . '-'. uniqid() . '.' . $fileBackdrop->guessExtension();
+                $fileBackdrop->move('uploads/backdrops/series', $nameBackdrop);
+                $serie->setBackdrop($nameBackdrop);
+            }
 
             $em->persist($serie);
             $em->flush();
             $this->addFlash('success','Votre série a bien été enregistrée');
-//            dd($serie);
+
+
+
 
             return $this->redirectToRoute('serie_detail', ['id' => $serie->getId()]);
         }
@@ -103,7 +123,7 @@ final class SerieController extends AbstractController
 
         $form->handleRequest($request);
 
-        if ($form->isSubmitted()){
+        if ($form->isSubmitted() && $form->isValid()) {
             $em->flush();
             $this->addFlash('success','Votre série a bien été modifiée');
 
@@ -115,4 +135,18 @@ final class SerieController extends AbstractController
         ]);
     }
 
+    #[Route('/delete/{id}', name: '_delete', requirements: ['id' => '\d+'])]
+    public function delete(Serie $serie, EntityManagerInterface $em, Request $request): Response
+    {
+        if ($this->isCsrfTokenValid('delete'.$serie->getId(), $request->get('token'))) {
+            $em->remove($serie);
+            $em->flush();
+
+            $this->addFlash('success', 'La série a été supprimée');
+        } else {
+            $this->addFlash('danger', 'Suppression impossible');
+        }
+
+        return $this->redirectToRoute('serie_list');
+    }
 }
