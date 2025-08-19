@@ -2,10 +2,14 @@
 
 namespace App\Controller;
 
+use App\Entity\Serie;
 use App\Form\SerieType;
 use App\Repository\SerieRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Mapping\Entity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -61,14 +65,9 @@ final class SerieController extends AbstractController
 
 
 
-    #[Route('/detail/{id}', name: '_detail')]
-    public function detail(int $id, SerieRepository $serieRepository): Response
+    #[Route('/detail/{id}', name: '_detail', requirements: ['id' => '\d+'])]
+    public function detail(Serie $serie): Response
     {
-        $serie = $serieRepository->find($id);
-
-        if (!$serie) {
-            throw $this->createNotFoundException('Pas de série pour cet id');
-        }
 
         return $this->render('serie/detail.html.twig', [
             'serie' => $serie
@@ -76,10 +75,44 @@ final class SerieController extends AbstractController
     }
 
     #[Route('/create', name: '_create')]
-    public function create(): Response{
-        $form = $this->createForm(SerieType::class);
+    public function create(Request $request, EntityManagerInterface $em): Response{
+        $serie = new Serie();
+        $form = $this->createForm(SerieType::class,$serie);
+
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted()){
+
+            $em->persist($serie);
+            $em->flush();
+            $this->addFlash('success','Votre série a bien été enregistrée');
+//            dd($serie);
+
+            return $this->redirectToRoute('serie_detail', ['id' => $serie->getId()]);
+        }
+
         return $this->render('serie/edit.html.twig', [
            'serie_form' => $form,
         ]);
     }
+
+    #[Route('/update/{id}', name: '_update', requirements: ['id' => '\d+'])]
+    public function update(Serie $serie, Request $request, EntityManagerInterface $em): Response{
+
+        $form = $this->createForm(SerieType::class,$serie);
+
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted()){
+            $em->flush();
+            $this->addFlash('success','Votre série a bien été modifiée');
+
+            return $this->redirectToRoute('serie_detail', ['id' => $serie->getId()]);
+        }
+
+        return $this->render('serie/edit.html.twig', [
+            'serie_form' => $form,
+        ]);
+    }
+
 }

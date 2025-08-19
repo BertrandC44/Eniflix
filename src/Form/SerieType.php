@@ -21,7 +21,9 @@ class SerieType extends AbstractType
                 'label' => 'Nom de la série',
                 'required' => true
             ])
-            ->add('overview', TextareaType::class)
+            ->add('overview', TextareaType::class, [
+                'required' => false
+            ])
             ->add('status', ChoiceType::class, [
                 'choices' => [
                     'En cours' => 'returning',
@@ -35,12 +37,15 @@ class SerieType extends AbstractType
             ->add('firstAirDate', DateType::class,[
                 'widget' => 'single_text',
             ])
-            ->add('lastAirDate', DateType::class)
+            ->add('lastAirDate', DateType::class, [
+                'widget' => 'single_text',
+                'required' => false,
+            ])
             ->add('backdrop')
             ->add('poster')
             ->add('submit', SubmitType::class, [
                 'label' => 'Enregistrer',
-            ]);
+            ])
         ;
     }
 
