@@ -30,12 +30,14 @@ final class SerieController extends AbstractController
 //            'genre' => 'Drama',
         ];
 
-        $series = $serieRepository->findBy(
-            $criterias,
-            ['popularity' => 'DESC'],
-            $nbPerPage,
-            $offset
-        );
+//        $series = $serieRepository->findBy(
+//            $criterias,
+//            ['popularity' => 'DESC'],
+//            $nbPerPage,
+//            $offset
+//        );
+
+        $series = $serieRepository->getSeriesWithSeason($nbPerPage, $offset);
 
         $total = $serieRepository->count($criterias);
         $totalPages = ceil($total / $nbPerPage);
