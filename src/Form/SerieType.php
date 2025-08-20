@@ -68,10 +68,10 @@ class SerieType extends AbstractType
                         'maxSizeMessage' => 'Votre fichier est trop lourd !',
                         'mimeTypes' => [
                             'image/jpeg',
+                            'image/jpg',
                             'image/png',
-                            'image/jpg'
                         ],
-                        'mimeTypesMessage' => 'Les formats acceptés sont : jpg, png ou jpeg !',
+                        'mimeTypesMessage' => 'Les formats acceptés sont : jpeg, jpg, png !',
                     ])
                 ]
             ])

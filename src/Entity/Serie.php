@@ -3,9 +3,11 @@
 namespace App\Entity;
 
 use App\Repository\SerieRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\ORM\Mapping\HasLifecycleCallbacks;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: SerieRepository::class)]
@@ -42,23 +44,23 @@ class Serie
     private ?string $genre = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
-    #[Assert\LessThan('- 3 days', message: 'La date de lancement ne doit pas être postérieure à {{ compared_value }}')]
+    #[Assert\LessThan('-3 days', message: 'La date de lancement ne doit pas être postérieure à {{ compared_value }}')]
+    private ?\DateTime $firstAirDate = null;
+
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    #[Assert\GreaterThan(propertyPath: 'firstAirDate')]
     #[Assert\When(
         expression: "this.getStatus() == 'ended' || this.getStatus() == 'Canceled'",
         constraints: [
-            new Assert\NotBlank(message: 'Vu le statut, il faut une date de fin')
+            new Assert\NotBlank(message : 'Vu le statut, il faut une date de fin'),
         ]
     )]
     #[Assert\When(
         expression: "this.getStatus() == 'returning'",
         constraints: [
-            new Assert\Blank(message: 'Vu le statut, il ne faut pas une date de fin')
+            new Assert\Blank(message : 'Vu le statut, il ne faut pas de date de fin'),
         ]
     )]
-    private ?\DateTime $firstAirDate = null;
-
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
-    #[Assert\GreaterThan(propertyPath: 'firstAirDate')]
     private ?\DateTime $lastAirDate = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -75,6 +77,17 @@ class Serie
 
     #[ORM\Column(nullable: true)]
     private ?\DateTime $dateModified = null;
+
+    /**
+     * @var Collection<int, Season>
+     */
+    #[ORM\OneToMany(targetEntity: Season::class, mappedBy: 'serie', orphanRemoval: true)]
+    private Collection $seasons;
+
+    public function __construct()
+    {
+        $this->seasons = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -235,6 +248,36 @@ class Serie
     public function setDateModified(): static
     {
         $this->dateModified = new \DateTime();
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Season>
+     */
+    public function getSeasons(): Collection
+    {
+        return $this->seasons;
+    }
+
+    public function addSeason(Season $season): static
+    {
+        if (!$this->seasons->contains($season)) {
+            $this->seasons->add($season);
+            $season->setSerie($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSeason(Season $season): static
+    {
+        if ($this->seasons->removeElement($season)) {
+            // set the owning side to null (unless already changed)
+            if ($season->getSerie() === $this) {
+                $season->setSerie(null);
+            }
+        }
 
         return $this;
     }

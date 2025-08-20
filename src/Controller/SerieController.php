@@ -6,7 +6,6 @@ use App\Entity\Serie;
 use App\Form\SerieType;
 use App\Repository\SerieRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Mapping\Entity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -77,7 +76,7 @@ final class SerieController extends AbstractController
     }
 
     #[Route('/create', name: '_create')]
-    public function create(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response{
+    public function create(Request $request, EntityManagerInterface $em, SluggerInterface $slugger, ParameterBagInterface $parameterBag): Response{
         $serie = new Serie();
         $form = $this->createForm(SerieType::class,$serie);
 
@@ -90,14 +89,16 @@ final class SerieController extends AbstractController
 //            dd($file);
             if($file instanceof UploadedFile){
                 $name = $slugger->slug($serie->getName()) . '-'. uniqid() . '.' . $file->guessExtension();
-                $file->move('uploads/posters/series', $name);
+                $dir = $parameterBag->get('serie')['poster_directory'];
+                $file->move($dir, $name);
                 $serie->setPoster($name);
             }
 
             $fileBackdrop=$form->get('backdrop_file')->getData();
             if($fileBackdrop instanceof UploadedFile){
                 $nameBackdrop = $slugger->slug($serie->getName()) . '-'. uniqid() . '.' . $fileBackdrop->guessExtension();
-                $fileBackdrop->move('uploads/backdrops/series', $nameBackdrop);
+                $dirBackdrop = $parameterBag->get('serie')['backdrop_directory'];
+                $fileBackdrop->move($dirBackdrop, $nameBackdrop);
                 $serie->setBackdrop($nameBackdrop);
             }
 
@@ -117,15 +118,39 @@ final class SerieController extends AbstractController
     }
 
     #[Route('/update/{id}', name: '_update', requirements: ['id' => '\d+'])]
-    public function update(Serie $serie, Request $request, EntityManagerInterface $em): Response{
-
-        $form = $this->createForm(SerieType::class,$serie);
+    public function update(
+        Serie $serie,
+        Request $request,
+        EntityManagerInterface $em,
+        SluggerInterface $slugger,
+        ParameterBagInterface $parameterBag
+    ): Response
+    {
+        $form = $this->createForm(SerieType::class, $serie);
 
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+
+            $file = $form->get('poster_file')->getData();
+            if($file instanceof UploadedFile){
+                $name = $slugger->slug($serie->getName()) . '-'. uniqid() . '.' . $file->guessExtension();
+                $dir = $parameterBag->get('serie')['poster_directory'];
+                $file->move($dir, $name);
+                $serie->setPoster($name);
+            }
+
+            $fileBackdrop=$form->get('backdrop_file')->getData();
+            if($fileBackdrop instanceof UploadedFile){
+                $nameBackdrop = $slugger->slug($serie->getName()) . '-'. uniqid() . '.' . $fileBackdrop->guessExtension();
+                $dirBackdrop = $parameterBag->get('serie')['backdrop_directory'];
+                $fileBackdrop->move($dirBackdrop, $nameBackdrop);
+                $serie->setBackdrop($nameBackdrop);
+            }
+
             $em->flush();
-            $this->addFlash('success','Votre série a bien été modifiée');
+
+            $this->addFlash('success', 'Une série a été mise à jour');
 
             return $this->redirectToRoute('serie_detail', ['id' => $serie->getId()]);
         }
