@@ -12,9 +12,11 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
 #[Route('/serie', name: 'serie')]
+#[IsGranted('ROLE_USER')]
 final class SerieController extends AbstractController
 {
 
@@ -78,6 +80,7 @@ final class SerieController extends AbstractController
     }
 
     #[Route('/create', name: '_create')]
+    #[ISGranted('ROLE_ADMIN')]
     public function create(Request $request, EntityManagerInterface $em, SluggerInterface $slugger, ParameterBagInterface $parameterBag): Response{
         $serie = new Serie();
         $form = $this->createForm(SerieType::class,$serie);
@@ -120,6 +123,7 @@ final class SerieController extends AbstractController
     }
 
     #[Route('/update/{id}', name: '_update', requirements: ['id' => '\d+'])]
+    #[ISGranted('ROLE_MODERATEUR')]
     public function update(
         Serie $serie,
         Request $request,
@@ -163,6 +167,7 @@ final class SerieController extends AbstractController
     }
 
     #[Route('/delete/{id}', name: '_delete', requirements: ['id' => '\d+'])]
+    #[ISGranted('ROLE_ADMIN')]
     public function delete(Serie $serie, EntityManagerInterface $em, Request $request): Response
     {
         if ($this->isCsrfTokenValid('delete'.$serie->getId(), $request->get('token'))) {
