@@ -6,6 +6,9 @@
 parameters:
     serie:
         nb_max: 10
+        poster_directory: 'uploads/posters/series'
+        backdrop_directory: 'uploads/backdrops'
+
 
 services:
     # default configuration for services in *this* file
