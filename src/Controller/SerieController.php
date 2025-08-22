@@ -82,7 +82,7 @@ final class SerieController extends AbstractController
 
     #[Route('/create', name: '_create')]
     #[ISGranted('ROLE_ADMIN')]
-    public function create(Request $request, EntityManagerInterface $em, SluggerInterface $slugger, ParameterBagInterface $parameterBag): Response{
+    public function create(Request $request, EntityManagerInterface $em, ParameterBagInterface $parameterBag, FileUploader $fileUploader): Response{
         $serie = new Serie();
         $form = $this->createForm(SerieType::class,$serie);
 
@@ -93,27 +93,28 @@ final class SerieController extends AbstractController
 
             $file=$form->get('poster_file')->getData();
 //            dd($file);
-            if($file instanceof UploadedFile){
-                $name = $slugger->slug($serie->getName()) . '-'. uniqid() . '.' . $file->guessExtension();
-                $dir = $parameterBag->get('serie')['poster_directory'];
-                $file->move($dir, $name);
+            if ($file instanceof UploadedFile) {
+                $name = $fileUploader->upload(
+                    $file,
+                    $serie->getName(),
+                    $parameterBag->get('serie')['poster_directory']
+                );
                 $serie->setPoster($name);
             }
 
             $fileBackdrop=$form->get('backdrop_file')->getData();
-            if($fileBackdrop instanceof UploadedFile){
-                $nameBackdrop = $slugger->slug($serie->getName()) . '-'. uniqid() . '.' . $fileBackdrop->guessExtension();
-                $dirBackdrop = $parameterBag->get('serie')['backdrop_directory'];
-                $fileBackdrop->move($dirBackdrop, $nameBackdrop);
+            if ($fileBackdrop instanceof UploadedFile) {
+                $nameBackdrop = $fileUploader->upload(
+                    $fileBackdrop,
+                    $serie->getName(),
+                    $parameterBag->get('serie')['backdrop_directory']
+                );
                 $serie->setBackdrop($nameBackdrop);
             }
 
             $em->persist($serie);
             $em->flush();
             $this->addFlash('success','Votre série a bien été enregistrée');
-
-
-
 
             return $this->redirectToRoute('serie_detail', ['id' => $serie->getId()]);
         }
@@ -123,16 +124,40 @@ final class SerieController extends AbstractController
         ]);
     }
 
+//    **** Controller Create sans service FileUploader ****
+//
+//    #[Route('/create', name: '_create')]
+//    public function create(Request $request, EntityManagerInterface $em): Response{
+//        $serie = new Serie();
+//        $form = $this->createForm(SerieType::class,$serie);
+//
+//        $form->handleRequest($request);
+//
+//        if ($form->isSubmitted()){
+//
+//            $em->persist($serie);
+//            $em->flush();
+//            $this->addFlash('success','Votre série a bien été enregistrée');
+////            dd($serie);
+//
+//            return $this->redirectToRoute('serie_detail', ['id' => $serie->getId()]);
+//        }
+//
+//        return $this->render('serie/edit.html.twig', [
+//            'serie_form' => $form,
+//        ]);
+//    }
+
     #[Route('/update/{id}', name: '_update', requirements: ['id' => '\d+'])]
-    #[ISGranted('ROLE_MODERATEUR')]
+    #[ISGranted('ROLE_ADMIN')]
     public function update(
         Serie $serie,
         Request $request,
         EntityManagerInterface $em,
-        SluggerInterface $slugger,
         FileUploader $fileUploader,
         ParameterBagInterface $parameterBag
     ): Response
+
     {
         $form = $this->createForm(SerieType::class, $serie);
 
@@ -141,20 +166,31 @@ final class SerieController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
 
             $file = $form->get('poster_file')->getData();
-            if($file instanceof UploadedFile){
+            if ($file instanceof UploadedFile) {
+                $dir = $parameterBag->get('serie')['poster_directory'];
                 $name = $fileUploader->upload(
                     $file,
                     $serie->getName(),
-                    $parameterBag->get('serie')['poster_dir']);
+                    $dir
+                );
+                if ($serie->getPoster() && file_exists($dir . '/' . $serie->getPoster())) {
+                    unlink($dir . '/' . $serie->getPoster());
+                }
                 $serie->setPoster($name);
             }
 
-            $fileBackdrop=$form->get('backdrop_file')->getData();
-            if($fileBackdrop instanceof UploadedFile){
-                $nameBackdrop = $slugger->slug($serie->getName()) . '-'. uniqid() . '.' . $fileBackdrop->guessExtension();
-                $dirBackdrop = $parameterBag->get('serie')['backdrop_directory'];
-                $fileBackdrop->move($dirBackdrop, $nameBackdrop);
-                $serie->setBackdrop($nameBackdrop);
+            $fileBackdrop = $form->get('backdrop_file')->getData();
+            if ($file instanceof UploadedFile) {
+                $dir = $parameterBag->get('serie')['backdrop_directory'];
+                $name = $fileUploader->upload(
+                    $fileBackdrop,
+                    $serie->getName(),
+                    $dir
+                );
+                if ($serie->getPoster() && file_exists($dir . '/' . $serie->getBackdrop())) {
+                    unlink($dir . '/' . $serie->getBackdrop());
+                }
+                $serie->setBackdrop($name);
             }
 
             $em->flush();
@@ -168,6 +204,55 @@ final class SerieController extends AbstractController
             'serie_form' => $form,
         ]);
     }
+
+//    **** Controller Update sans service FileUploader ****
+//
+//    #[Route('/update/{id}', name: '_update', requirements: ['id' => '\d+'])]
+//    #[ISGranted('ROLE_MODERATEUR')]
+//    public function update(
+//        Serie $serie,
+//        Request $request,
+//        EntityManagerInterface $em,
+//        FileUploader $fileUploader,
+//        ParameterBagInterface $parameterBag
+//    ): Response
+//    {
+//        $form = $this->createForm(SerieType::class, $serie);
+//
+//        $form->handleRequest($request);
+//
+//        if ($form->isSubmitted() && $form->isValid()) {
+//
+//            $file = $form->get('poster_file')->getData();
+//            if($file instanceof UploadedFile){
+//                $name = $fileUploader->upload(
+//                    $file,
+//                    $serie->getName(),
+//                    $parameterBag->get('serie')['poster_dir']);
+//                $serie->setPoster($name);
+//            }
+//
+//            $fileBackdrop=$form->get('backdrop_file')->getData();
+//            if($fileBackdrop instanceof UploadedFile){
+//                $nameBackdrop = $slugger->slug($serie->getName()) . '-'. uniqid() . '.' . $fileBackdrop->guessExtension();
+//                $dirBackdrop = $parameterBag->get('serie')['backdrop_directory'];
+//                $fileBackdrop->move($dirBackdrop, $nameBackdrop);
+//                $serie->setBackdrop($nameBackdrop);
+//            }
+//
+//            $em->flush();
+//
+//            $this->addFlash('success', 'Une série a été mise à jour');
+//
+//            return $this->redirectToRoute('serie_detail', ['id' => $serie->getId()]);
+//        }
+//
+//        return $this->render('serie/edit.html.twig', [
+//            'serie_form' => $form,
+//        ]);
+//    }
+
+
 
     #[Route('/delete/{id}', name: '_delete', requirements: ['id' => '\d+'])]
     #[ISGranted('ROLE_ADMIN')]
