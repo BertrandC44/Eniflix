@@ -148,6 +148,9 @@ final class SerieController extends AbstractController
 //        ]);
 //    }
 
+// Juste pour essai Git
+
+
     #[Route('/update/{id}', name: '_update', requirements: ['id' => '\d+'])]
     #[ISGranted('ROLE_ADMIN')]
     public function update(
